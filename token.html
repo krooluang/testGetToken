@@ -12,6 +12,19 @@
         body {
             font-family: 'Sarabun', sans-serif;
         }
+        /* Overlay for loading background */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8); /* White background with 80% opacity */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Make sure it stays on top */
+        }
     </style>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -39,6 +52,14 @@
     <div id="tokenDisplay" class="mt-4" style="display:none;">
         <h3>LINE Notify Token คือ</h3>
         <p id="token"></p>
+    </div>
+
+    <!-- Loading Spinner Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">กำลังบันทึกข้อมูล...</span>
+        </div>
+        <p>กำลังสร้างโทเค่น...</p>
     </div>
 
     <script>
@@ -70,6 +91,8 @@
             const studentName = document.getElementById('studentName').value;
 
             if (studentId && studentName) {
+                // Show loading overlay
+                document.getElementById('loadingOverlay').style.display = 'flex';
                 document.getElementById('submitButton').disabled = true;
 
                 const redirectUrl = `https://notify-bot.line.me/oauth/authorize?response_type=code&client_id=${noti_ClientId}&redirect_uri=${noti_RedirectUrl}&scope=notify&state=${studentId}_${studentName}`;
@@ -84,13 +107,19 @@
         });
 
         function displayToken(token) {
-            document.getElementById('tokenDisplay').style.display = 'block';
-            document.getElementById('token').textContent = token;
-            Swal.fire({
-                icon: 'success',
-                title: 'บันทึกข้อมูลเรียบร้อย',
-                text: 'โทเค่นถูกสร้างเรียบร้อยแล้ว!'
-            });
+            // Show loading overlay again before saving token
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            setTimeout(function() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('tokenDisplay').style.display = 'block';
+                document.getElementById('token').textContent = token;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกข้อมูลเรียบร้อย',
+                    text: 'โทเค่นถูกสร้างเรียบร้อยแล้ว!'
+                });
+            }, 1500); // Delay to simulate saving process
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -98,15 +127,21 @@
             const code = params.get('code');
             const state = params.get('state');
 
+            // Show loading when fetching token
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
             fetch(appScriptUrl, {
                 method: 'POST',
                 body: JSON.stringify({ code, state }),
             })
             .then(response => response.json())
             .then(data => {
+                // Hide the loading spinner for fetch, but show it again before saving the token
+                document.getElementById('loadingOverlay').style.display = 'none';
                 displayToken(data.token);
             })
             .catch(error => {
+                document.getElementById('loadingOverlay').style.display = 'none';
                 Swal.fire({
                     icon: 'error',
                     title: 'เกิดข้อผิดพลาด',
